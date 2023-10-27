@@ -1,37 +1,13 @@
 const puppeteer = require('puppeteer');
-const fs = require('fs');
-const timeout = 0;
-const timeout2 = 3000;
-const prompts = require('prompt-sync');
-const prompt = prompts(); 
 
-let username = prompt("Enter your phone number(70xxxxxxxx) ");
-let pswd = prompt("Enter your password ");
-if (username || pswd !== "") {
-  console.log('OK, Opening chrome instance...')
-} else {
-  throw new error("You have to enter your details.")
-}
-
-var location = prompt("Enter your phone chrome install location(default :C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe ) ");
-let defaultLocation = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
-if(location===""){
- location = defaultLocation
-}
-console.log(location)
-const stake = prompt("Enter your stake ");
 (async () => {
-  const browser = await puppeteer.launch({ headless: false, executablePath: location });
+  const browser = await puppeteer.launch({ headless: false, executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" });
   const page = await browser.newPage();
 
   await page.setDefaultNavigationTimeout(0);
 
-  await page.goto('https://www.sportybet.com');
+  await page.goto('https://twitter.com/search?q=sportybet&src=typed_query&f=live');
 
-  await page.waitForSelector('input[name="phone"]');
-  await page.type('input[name="phone"]', username);
-  await page.type('input[name="psd"]', pswd);
-  // await page.waitForTimeout(10000);
   
   {
     const targetPage = page;
@@ -45,10 +21,6 @@ const stake = prompt("Enter your stake ");
     });
   }
   console.log("Logged in");
-  // await page.click('#j_page_header > div.m-top-wrapper > div > div.m-logo-bar > div.m-login-bar > div.m-opt > div.m-psd-wrapper > div.m-psd > button');
-
-  const data = fs.readFileSync('codes.txt', 'utf8');
-  const values = data.split(',').map((value) => value.trim());
 
   for (let i = 0; i < values.length; i++) {
     const betCode = values[i];
@@ -61,24 +33,7 @@ const stake = prompt("Enter your stake ");
     await page.click('#j_betslip > div.m-betslips > div.m-betslip-search > div.m-opt-wrapper > button');
     // console.log("Loaded code");
 
-    try {
-
-      await Promise.race([
-        page.waitForSelector('#esDialog0 > div.es-dialog.m-dialog > div > div > div > div.m-pop-main > div.m-btn-wrapper.m-ok-wrap > button', { timeout: 10000 }), 
-        new Promise((resolve, reject) => setTimeout(resolve, 10000)) 
-      ]);
-
-      {
-        const targetPage = page;
-        const element = await waitForSelectors([["aria/min. 10"],["#j_stake_0 > span > input"]], targetPage, { timeout, visible: true });
-        await scrollIntoViewIfNeeded(element, timeout);
-        await element.click({
-          offset: {
-            x: 70.5,
-            y: 12.75,
-          },
-        });
-    }
+    
       await page.keyboard.down('Control');
       await page.keyboard.press('A');
       await page.keyboard.up('Control');
@@ -142,12 +97,7 @@ const stake = prompt("Enter your stake ");
     // console.log("Okay Dialog")
 
     console.log(`Staked ${betCode}`);
-  
-    } catch (error) {
-      console.log(`Something went wrong with ${betCode}. Skipping...`);
-      await page.reload();
-      continue; 
-    }
+
   }
 
   await browser.close();
