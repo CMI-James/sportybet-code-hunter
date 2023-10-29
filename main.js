@@ -23,7 +23,7 @@ async function extractAllHexCodesFromDivElements(page, selectors, regexPattern) 
 
     for (const divElement of divElements) {
       const textContent = await extractTextFromElement(divElement);
-      console.log(textContent)
+      // console.log(textContent)
       const hexCodes = await extractHexCodesFromText(textContent, regexPattern);
       extractedHexCodes.push(...hexCodes);
     }
