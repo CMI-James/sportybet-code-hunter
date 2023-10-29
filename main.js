@@ -77,4 +77,5 @@ fs.writeFile(filePath, arrayAsString, (err) => {
     console.log('Codes saved to ' + filePath);
   }
 });
+await browser.close();
 })();
