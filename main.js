@@ -1,4 +1,5 @@
 const puppeteer = require('puppeteer');
+const { KnownDevices } = require('puppeteer');
 const fs = require('fs');
 
 async function extractTextFromElement(element) {
@@ -43,17 +44,20 @@ async function scrollDownForDuration(page, duration) {
 
 (async () => {
   const browser = await puppeteer.launch({ headless: false, executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" });
+  const m = KnownDevices['iPhone X']
+//emulate iPhoneX
   const page = await browser.newPage();
+  await page.emulate(m)
 
   await page.setDefaultNavigationTimeout(0);
   const cookies = require('./auth.json');
   await page.setCookie(...cookies);
-  await page.goto('https://twitter.com/search?q=sportybet&src=typed_query');
+  await page.goto('https://twitter.com/search?q=sportybet&src=typed_query&f=live');
+  await scrollDownForDuration(page, 60000); 
 
-  const selectorA = 'div[class="css-901oao css-cens5h r-1nao33i r-1qd0xha r-a023e6 r-16dba41 r-rjixqe r-bcqeeo r-bnwqim r-qvutc0"]'; // Replace with your CSS selector A
+  const selectorA = 'div[class="css-1dbjc4n"]'; // Replace with your CSS selector A
   const selectorB = 'div[data-testid="tweetText"]'; 
 
-await scrollDownForDuration(page, 60000); 
 
   await page.waitForSelector(selectorA);
   await page.waitForSelector(selectorB);
@@ -70,7 +74,7 @@ fs.writeFile(filePath, arrayAsString, (err) => {
   if (err) {
     console.error( err);
   } else {
-    console.log('Array saved to ' + filePath);
+    console.log('Codes saved to ' + filePath);
   }
 });
 })();
