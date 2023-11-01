@@ -1,6 +1,9 @@
 const puppeteer = require('puppeteer');
 // const { KnownDevices } = require('puppeteer');
 const fs = require('fs');
+const prompts = require('prompts');
+const spinner = require('simple-spinner');
+
 
 async function extractTextFromElement(element) {
   const text = await element.evaluate((el) => el.textContent);
@@ -49,7 +52,17 @@ async function scrollAndExtractCodes(page, selectors, hexCodeRegex, scrollDurati
 }
 
 (async () => {
-  const browser = await puppeteer.launch({ headless: false, executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" });
+  const response = await prompts([
+    {
+      type: 'number',
+      name: 'Time',
+      message: 'Enter your desired search time(In milliseconds)'
+    }
+  ]);
+  spinner.start('Loading codes...');
+  
+  const { Time } = response;
+  const browser = await puppeteer.launch({ headless: true, executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" });
   // const m = KnownDevices['iPhone X']
   const page = await browser.newPage();
   // await page.emulate(m)
@@ -67,7 +80,7 @@ async function scrollAndExtractCodes(page, selectors, hexCodeRegex, scrollDurati
 
   const hexCodeRegex = /\b[0-9A-Fa-f]{7,8}\b/g;
 
-  const scrollDuration = 60000; //Time in milliseconds
+  const scrollDuration = Time; //Time in milliseconds
   const selectors = [selectorA, selectorB];
   const extractedHexCodes = await scrollAndExtractCodes(page, selectors, hexCodeRegex, scrollDuration);
 
@@ -83,4 +96,8 @@ async function scrollAndExtractCodes(page, selectors, hexCodeRegex, scrollDurati
     }
   });
   await browser.close();
+  setTimeout(() => {
+    spinner.stop();
+    console.log('');
+  }, 500);
 })();
