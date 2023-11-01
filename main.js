@@ -4,6 +4,24 @@ const fs = require('fs');
 const prompts = require('prompts');
 const spinner = require('simple-spinner');
 
+function countdownTimer(milliseconds) {
+  let remainingTime = milliseconds;
+  let startTime = Date.now();
+
+  const intervalId = setInterval(function () {
+    const elapsedTime = Date.now() - startTime;
+    const remainingMilliseconds = remainingTime - elapsedTime;
+
+    if (remainingMilliseconds <= 0) {
+      clearInterval(intervalId);
+      process.stdout.write('\r \n');
+    } else {
+      const seconds = Math.floor(remainingMilliseconds / 1000);
+      const milliseconds = remainingMilliseconds % 1000;
+      process.stdout.write(`\r${seconds}.${milliseconds} seconds  `);
+    }
+  }, 10); // Update every 10 milliseconds (adjust as needed)
+}
 
 async function extractTextFromElement(element) {
   const text = await element.evaluate((el) => el.textContent);
@@ -71,7 +89,6 @@ async function scrollAndExtractCodes(page, selectors, hexCodeRegex, scrollDurati
   const cookies = require('./auth.json');
   await page.setCookie(...cookies);
   await page.goto('https://twitter.com/search?q=sportybet&src=typed_query');
-
   const selectorA = 'span.css-901oao.css-16my406.r-poiln3.r-bcqeeo.r-qvutc0';
   const selectorB = 'div[data-testid="tweetText"]';
 
@@ -82,6 +99,7 @@ async function scrollAndExtractCodes(page, selectors, hexCodeRegex, scrollDurati
 
   const scrollDuration = Time; //Time in milliseconds
   const selectors = [selectorA, selectorB];
+  countdownTimer(Time);
   const extractedHexCodes = await scrollAndExtractCodes(page, selectors, hexCodeRegex, scrollDuration);
 
   const codes = [...new Set(extractedHexCodes)];
