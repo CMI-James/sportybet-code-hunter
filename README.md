@@ -6,4 +6,4 @@ A script to help scrape sportybet booking codes from twitter
 * cd into the folder and ```npm install```
 *  ```npm start```
 * Input how long you want it to search for codes (in milliseconds)
-* Watch the magic happen
+* When its done it'll create a file ```betcodes.txt``` containing all the scraped codes
