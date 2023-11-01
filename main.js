@@ -75,12 +75,18 @@ async function scrollAndExtractCodes(page, selectors, hexCodeRegex, scrollDurati
       type: 'number',
       name: 'Time',
       message: 'Enter your desired search time(In milliseconds)'
+    },
+    {
+      type: 'text',
+      name: 'Link',
+      message: 'Paste the twitter link containing your search query ',
+      validate: (value) => value.trim() !== '' ? true : 'Link is required'
     }
   ]);
   spinner.start('Loading codes...');
   
-  const { Time } = response;
-  const browser = await puppeteer.launch({ headless: true, executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" });
+  const { Time, Link } = response;
+  const browser = await puppeteer.launch({executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" });
   // const m = KnownDevices['iPhone X']
   const page = await browser.newPage();
   // await page.emulate(m)
@@ -88,7 +94,7 @@ async function scrollAndExtractCodes(page, selectors, hexCodeRegex, scrollDurati
   await page.setDefaultNavigationTimeout(0);
   const cookies = require('./auth.json');
   await page.setCookie(...cookies);
-  await page.goto('https://twitter.com/search?q=sportybet&src=typed_query');
+  await page.goto(Link);
   const selectorA = 'span.css-901oao.css-16my406.r-poiln3.r-bcqeeo.r-qvutc0';
   const selectorB = 'div[data-testid="tweetText"]';
 
@@ -99,7 +105,7 @@ async function scrollAndExtractCodes(page, selectors, hexCodeRegex, scrollDurati
 
   const scrollDuration = Time; //Time in milliseconds
   const selectors = [selectorA, selectorB];
-  countdownTimer(Time);
+  countdownTimer(Time*2);
   const extractedHexCodes = await scrollAndExtractCodes(page, selectors, hexCodeRegex, scrollDuration);
 
   const codes = [...new Set(extractedHexCodes)];
