@@ -50,14 +50,14 @@ async function scrollAndExtractCodes(page, selectors, hexCodeRegex, scrollDurati
 
 (async () => {
   const browser = await puppeteer.launch({ headless: false, executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" });
-  const m = KnownDevices['iPhone X']
+  // const m = KnownDevices['iPhone X']
   const page = await browser.newPage();
   // await page.emulate(m)
 
   await page.setDefaultNavigationTimeout(0);
   const cookies = require('./auth.json');
   await page.setCookie(...cookies);
-  await page.goto('https://twitter.com/search?q=sportybet&src=typed_query&f=live');
+  await page.goto('https://twitter.com/search?q=sportybet&src=typed_query');
 
   const selectorA = 'span.css-901oao.css-16my406.r-poiln3.r-bcqeeo.r-qvutc0';
   const selectorB = 'div[data-testid="tweetText"]';
