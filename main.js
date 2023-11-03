@@ -60,7 +60,7 @@ async function scrollAndExtractCodes(page, selectors, hexCodeRegex, scrollDurati
     await page.evaluate(() => {
       window.scrollBy(0, window.innerHeight);
     });
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(125);
     const codes = await extractAllHexCodesFromDivElements(page, selectors, hexCodeRegex);
     extractedHexCodes.push(...codes);
     currentTime += 1000;
@@ -86,7 +86,7 @@ async function scrollAndExtractCodes(page, selectors, hexCodeRegex, scrollDurati
   spinner.start('Loading codes...');
   
   const { Time, Link } = response;
-  const browser = await puppeteer.launch({executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" });
+  const browser = await puppeteer.launch({headless:"new",executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" });
   // const m = KnownDevices['iPhone X']
   const page = await browser.newPage();
   // await page.emulate(m)
@@ -105,7 +105,7 @@ async function scrollAndExtractCodes(page, selectors, hexCodeRegex, scrollDurati
 
   const scrollDuration = Time; //Time in milliseconds
   const selectors = [selectorA, selectorB];
-  countdownTimer(Time*2);
+  countdownTimer(Time);
   const extractedHexCodes = await scrollAndExtractCodes(page, selectors, hexCodeRegex, scrollDuration);
 
   const codes = [...new Set(extractedHexCodes)];
