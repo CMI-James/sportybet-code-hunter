@@ -1,12 +1,13 @@
-const puppeteer = require('puppeteer');
+const puppeteer = require("puppeteer");
 // const { KnownDevices } = require('puppeteer');
-const fs = require('fs');
-const prompts = require('prompts');
-const spinner = require('simple-spinner');
+
+const fs = require("fs");
+const prompts = require("prompts");
+const spinner = require("simple-spinner");
 
 function linkify(input) {
   // Use a regular expression to match all spaces globally and replace them with '%20'
-  return input.replace(/ /g, '%20');
+  return input.replace(/ /g, "%20");
 }
 
 function countdownTimer(milliseconds) {
@@ -19,7 +20,7 @@ function countdownTimer(milliseconds) {
 
     if (remainingMilliseconds <= 0) {
       clearInterval(intervalId);
-      process.stdout.write('\r \n');
+      process.stdout.write("\r \n");
     } else {
       const seconds = Math.floor(remainingMilliseconds / 1000);
       const milliseconds = remainingMilliseconds % 1000;
@@ -41,7 +42,11 @@ async function extractHexCodesFromText(text, regexPattern) {
   return [];
 }
 
-async function extractAllHexCodesFromDivElements(page, selectors, regexPattern) {
+async function extractAllHexCodesFromDivElements(
+  page,
+  selectors,
+  regexPattern
+) {
   const extractedHexCodes = [];
 
   for (const selector of selectors) {
@@ -57,7 +62,12 @@ async function extractAllHexCodesFromDivElements(page, selectors, regexPattern) 
   return extractedHexCodes;
 }
 
-async function scrollAndExtractCodes(page, selectors, hexCodeRegex, scrollDuration) {
+async function scrollAndExtractCodes(
+  page,
+  selectors,
+  hexCodeRegex,
+  scrollDuration
+) {
   const extractedHexCodes = [];
   let currentTime = 0;
 
@@ -66,7 +76,11 @@ async function scrollAndExtractCodes(page, selectors, hexCodeRegex, scrollDurati
       window.scrollBy(0, window.innerHeight);
     });
     await page.waitForTimeout(125);
-    const codes = await extractAllHexCodesFromDivElements(page, selectors, hexCodeRegex);
+    const codes = await extractAllHexCodesFromDivElements(
+      page,
+      selectors,
+      hexCodeRegex
+    );
     extractedHexCodes.push(...codes);
     currentTime += 1000;
   }
@@ -77,31 +91,37 @@ async function scrollAndExtractCodes(page, selectors, hexCodeRegex, scrollDurati
 (async () => {
   const response = await prompts([
     {
-      type: 'number',
-      name: 'Time',
-      message: 'Enter your desired search time(In milliseconds)'
+      type: "number",
+      name: "Time",
+      message: "Enter your desired search time(In milliseconds)",
     },
     {
-      type: 'text',
-      name: 'Linkk',
-      message: 'Enter your search query ',
-      validate: (value) => value.trim() !== '' ? true : 'Query is required'
-    }
+      type: "text",
+      name: "Linkk",
+      message: "Enter your search query ",
+      validate: (value) => (value.trim() !== "" ? true : "Query is required"),
+    },
   ]);
-  spinner.start('Loading codes...');
-  
+  spinner.start("Loading codes...");
+
   const { Time, Linkk } = response;
-  const Link = linkify(Linkk)
-  const browser = await puppeteer.launch({headless:"new",executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" });
+  const Link = linkify(Linkk);
+  const browser = await puppeteer.launch({
+    headless: "new",
+    executablePath:
+      "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+  });
   // const m = KnownDevices['iPhone X']
   const page = await browser.newPage();
   // await page.emulate(m)
 
   await page.setDefaultNavigationTimeout(0);
-  const cookies = require('./auth.json');
+  const cookies = require("./auth.json");
   await page.setCookie(...cookies);
-  await page.goto(`https://twitter.com/search?q=${Link}&src=typeahead_click&f=live`);
-  const selectorA = 'span.css-901oao.css-16my406.r-poiln3.r-bcqeeo.r-qvutc0';
+  await page.goto(
+    `https://twitter.com/search?q=${Link}&src=typeahead_click&f=live`
+  );
+  const selectorA = "span.css-901oao.css-16my406.r-poiln3.r-bcqeeo.r-qvutc0";
   const selectorB = 'div[data-testid="tweetText"]';
 
   await page.waitForSelector(selectorA);
@@ -112,22 +132,40 @@ async function scrollAndExtractCodes(page, selectors, hexCodeRegex, scrollDurati
   const scrollDuration = Time; //Time in milliseconds
   const selectors = [selectorA, selectorB];
   countdownTimer(Time);
-  const extractedHexCodes = await scrollAndExtractCodes(page, selectors, hexCodeRegex, scrollDuration);
+  const extractedHexCodes = await scrollAndExtractCodes(
+    page,
+    selectors,
+    hexCodeRegex,
+    scrollDuration
+  );
 
   const codes = [...new Set(extractedHexCodes)];
   console.log(codes);
-  const arrayAsString = codes.join(',');
-  const filePath = 'betcodes.txt';
-  fs.writeFile(filePath, arrayAsString, (err) => {
+  console.log(`Number of codes generated: ${codes.length}`);
+ 
+  const now = new Date();
+  const timestamp =
+    now.toLocaleTimeString().replace(/:/g, "-") +
+    "_" +
+    now.toLocaleDateString().replace(/\//g, "-");
+  const folderName = "betcodes";
+  const filePath = `${folderName}/betcodes_${timestamp}.txt`;
+
+
+  if (!fs.existsSync(folderName)) {
+    fs.mkdirSync(folderName);
+  }
+  fs.writeFile(filePath, codes.join("\n"), (err) => {
     if (err) {
       console.error(err);
     } else {
-      console.log('Codes saved to ' + filePath);
+      console.log("Codes saved to " + filePath);
     }
   });
+
   await browser.close();
   setTimeout(() => {
     spinner.stop();
-    console.log('');
+    console.log("");
   }, 500);
 })();
