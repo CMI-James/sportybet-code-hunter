@@ -4,6 +4,11 @@ const fs = require('fs');
 const prompts = require('prompts');
 const spinner = require('simple-spinner');
 
+function linkify(input) {
+  // Use a regular expression to match all spaces globally and replace them with '%20'
+  return input.replace(/ /g, '%20');
+}
+
 function countdownTimer(milliseconds) {
   let remainingTime = milliseconds;
   let startTime = Date.now();
@@ -78,14 +83,15 @@ async function scrollAndExtractCodes(page, selectors, hexCodeRegex, scrollDurati
     },
     {
       type: 'text',
-      name: 'Link',
-      message: 'Paste the twitter link containing your search query ',
-      validate: (value) => value.trim() !== '' ? true : 'Link is required'
+      name: 'Linkk',
+      message: 'Enter your search query ',
+      validate: (value) => value.trim() !== '' ? true : 'Query is required'
     }
   ]);
   spinner.start('Loading codes...');
   
-  const { Time, Link } = response;
+  const { Time, Linkk } = response;
+  const Link = linkify(Linkk)
   const browser = await puppeteer.launch({headless:"new",executablePath: "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" });
   // const m = KnownDevices['iPhone X']
   const page = await browser.newPage();
@@ -94,7 +100,7 @@ async function scrollAndExtractCodes(page, selectors, hexCodeRegex, scrollDurati
   await page.setDefaultNavigationTimeout(0);
   const cookies = require('./auth.json');
   await page.setCookie(...cookies);
-  await page.goto(Link);
+  await page.goto(`https://twitter.com/search?q=${Link}&src=typeahead_click&f=live`);
   const selectorA = 'span.css-901oao.css-16my406.r-poiln3.r-bcqeeo.r-qvutc0';
   const selectorB = 'div[data-testid="tweetText"]';
 
