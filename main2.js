@@ -94,21 +94,21 @@ async function launchBrowserAndSearch(Link, duration) {
     const cookies = JSON.parse(fs.readFileSync(authFile, "utf8"));
 
     // Navigate to Twitter before setting cookies
-    await page.goto("https://twitter.com", { waitUntil: "domcontentloaded" });
-
-    // Set cookies
-    await setCookies(page, cookies);
-
-    // Navigate directly to the Twitter search page with the user input link
     await page.goto(
       `https://twitter.com/search?q=${Link}&src=typeahead_click&f=live`,
       { waitUntil: "domcontentloaded" }
     );
 
+    // Set cookies
+    await setCookies(page, cookies);
+
+    // Navigate directly to the Twitter search page with the user input link
+
     console.log(`Search results for "${Link}" displayed.`);
 
     const remainingTime = duration / 1000;
     let counter = remainingTime;
+    let hexCounter = 0; // Counter for hexadecimal codes
 
     const tweets = await extractAllTweets(page, [
       "span.css-901oao.css-16my406.r-poiln3.r-bcqeeo.r-qvutc0",
@@ -117,6 +117,7 @@ async function launchBrowserAndSearch(Link, duration) {
     const hexSet = new Set();
     // Scroll down for the specified duration
     const scrollInterval = setInterval(async () => {
+      
       page.evaluate(() => {
         window.scrollBy(0, window.innerHeight);
       });
@@ -131,22 +132,20 @@ async function launchBrowserAndSearch(Link, duration) {
       for (const tweetText of tweetTexts) {
         // Use a regular expression to find hexadecimal numbers
         const hexNumbers = tweetText.match(/\b(?:[0-9a-fA-F]{7,8})\b/g);
-        
-       
-    if (hexNumbers) {
-        // Add the found hexadecimal numbers to the Set
-        hexSet.add(...hexNumbers);
-      }
-      }
-    
 
-      process.stdout.write(`Time remaining: ${counter} seconds\r`);
+        if (hexNumbers) {
+          // Add the found hexadecimal numbers to the Set
+          hexSet.add(...hexNumbers);
+        }
+      }
+      hexCounter = Array.from(hexSet).length;
+      process.stdout.clearLine();
+      process.stdout.cursorTo(0);
+      process.stdout.write(
+        `Time remaining: ${counter} seconds | Codes Fetched: ${hexCounter}\r`
+      );
+      
       counter--;
-
-      if (counter < 2) {
-        clearInterval(scrollInterval);
-        
-      }
     }, 1000); // Scroll every second
 
     // Wait for the specified duration
@@ -154,16 +153,39 @@ async function launchBrowserAndSearch(Link, duration) {
 
     // Clear the interval to stop scrolling
     clearInterval(scrollInterval);
+    // Specify the folder path
+    const folderPath = "./betcodes"; // Update this with your desired folder path
 
+    // Ensure the folder exists, create it if it doesn't
+    if (!fs.existsSync(folderPath)) {
+      fs.mkdirSync(folderPath);
+    }
 
     const uniqueHexCodes = Array.from(hexSet);
     const hexCodesString = uniqueHexCodes.join("\n");
-    console.log("Writing tweets to file...");
-    const timestamp = new Date().toISOString().replace(/:/g, '_'); // Replace colons with underscores
-    const fileName = `tweets_${timestamp}.txt`;
+
+    const timestamp = new Date()
+      .toLocaleTimeString("en-US", {
+        hour12: true,
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      })
+      .replace(/:/g, "_");
+    const dateStamp = new Date()
+      .toLocaleDateString("en-US", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
+      .replace(/\//g, "_");
+    const fileName = `${folderPath}/betcodes_${dateStamp}_${timestamp}.txt`;
     await fs.promises.writeFile(fileName, hexCodesString);
-    console.log(`Unique Hexadecimal codes successfully written to ${fileName}.`);
-    console.log(`\nScrolling completed. Hexadecimal codes saved to ${fileName}.`);
+    
+    console.log(
+      `\nScrolling completed. Hexadecimal codes saved to ${fileName}.`
+    );
+    
     // You can perform further actions with the search results here
   } catch (error) {
     console.error("Error during login and search:", error);
