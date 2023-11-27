@@ -1,5 +1,5 @@
 const puppeteer = require("puppeteer");
-const fs = require("fs");
+const fs = require("fs").promises; // Use fs.promises for async fs operations
 const prompt = require("prompt");
 
 prompt.start();
@@ -24,30 +24,29 @@ async function extractAllTweets(page, selectors) {
   return tweets;
 }
 
-// Function to set cookies
 async function setCookies(page, cookies) {
   await page.setCookie(...cookies);
-  // Wait for a short period to ensure cookies are set
   await page.waitForTimeout(1000);
 }
 
-function getSearchLink() {
+async function getSearchLinks() {
   return new Promise((resolve, reject) => {
     prompt.get(
       [
         {
-          name: "Link",
-          description: "Enter your search query",
+          name: "Links",
+          description: "Enter your search queries separated by commas",
           type: "string",
           required: true,
-          message: "Query is required",
+          message: "Queries are required",
         },
       ],
       (err, result) => {
         if (err) {
           reject(err);
         } else {
-          resolve(result.Link);
+          const links = result.Links.split(",").map((link) => link.trim());
+          resolve(links);
         }
       }
     );
@@ -77,47 +76,49 @@ function getScrollDuration() {
   });
 }
 
-async function launchBrowserAndSearch(Link, duration) {
+async function launchBrowserAndSearch(link, duration) {
   const browser = await puppeteer.launch({ headless: false });
-  const page = await browser.newPage();
+  const allHexSet = new Set();
 
   try {
+    const page = await browser.newPage();
+
     // Check if auth.json file exists
     const authFile = "auth.json";
-    if (!fs.existsSync(authFile)) {
+    try {
+      await fs.access(authFile); // Use fs.access for existence check
+    } catch (error) {
       throw new Error(
-        "auth.json not found. Please login manually to obtain cookies."
+        "auth.json not found. Please log in manually to obtain cookies."
       );
     }
 
     // Read cookies from auth.json
-    const cookies = JSON.parse(fs.readFileSync(authFile, "utf8"));
+    const cookies = JSON.parse(await fs.readFile(authFile, "utf8"));
 
     // Navigate to Twitter before setting cookies
     await page.goto(
-      `https://twitter.com/search?q=${Link}&src=typeahead_click&f=live`,
+      `https://twitter.com/search?q=${link}&src=typeahead_click&f=live`,
       { waitUntil: "domcontentloaded" }
     );
 
     // Set cookies
     await setCookies(page, cookies);
 
-    // Navigate directly to the Twitter search page with the user input link
-
-    console.log(`Search results for "${Link}" displayed.`);
+    console.log(`Search results for "${link}" displayed.`);
 
     const remainingTime = duration / 1000;
     let counter = remainingTime;
     let hexCounter = 0; // Counter for hexadecimal codes
+    const hexSet = new Set();
 
     const tweets = await extractAllTweets(page, [
       "span.css-901oao.css-16my406.r-poiln3.r-bcqeeo.r-qvutc0",
       'div[data-testid="tweetText"]',
     ]);
-    const hexSet = new Set();
+
     // Scroll down for the specified duration
     const scrollInterval = setInterval(async () => {
-      
       page.evaluate(() => {
         window.scrollBy(0, window.innerHeight);
       });
@@ -129,6 +130,7 @@ async function launchBrowserAndSearch(Link, duration) {
           element.evaluate((node) => node.innerText)
         )
       );
+
       for (const tweetText of tweetTexts) {
         // Use a regular expression to find hexadecimal numbers
         const hexNumbers = tweetText.match(/\b(?:[0-9a-fA-F]{7,8})\b/g);
@@ -136,15 +138,15 @@ async function launchBrowserAndSearch(Link, duration) {
         if (hexNumbers) {
           // Add the found hexadecimal numbers to the Set
           hexSet.add(...hexNumbers);
+          hexCounter = Array.from(hexSet).length;
+          process.stdout.clearLine();
+          process.stdout.cursorTo(0);
+          process.stdout.write(
+            `Time remaining: ${counter} seconds | Codes Fetched: ${hexCounter} for "${link}"\r`
+          );
         }
       }
-      hexCounter = Array.from(hexSet).length;
-      process.stdout.clearLine();
-      process.stdout.cursorTo(0);
-      process.stdout.write(
-        `Time remaining: ${counter} seconds | Codes Fetched: ${hexCounter}\r`
-      );
-      
+
       counter--;
     }, 1000); // Scroll every second
 
@@ -153,12 +155,20 @@ async function launchBrowserAndSearch(Link, duration) {
 
     // Clear the interval to stop scrolling
     clearInterval(scrollInterval);
+    allHexSet.add(...hexSet); // Add current set to the accumulated set
+
+    console.log(`\nScrolling completed for "${link}".`);
+
     // Specify the folder path
     const folderPath = "./betcodes"; // Update this with your desired folder path
 
     // Ensure the folder exists, create it if it doesn't
-    if (!fs.existsSync(folderPath)) {
-      fs.mkdirSync(folderPath);
+    try {
+      await fs.mkdir(folderPath);
+    } catch (error) {
+      if (error.code !== "EEXIST") {
+        throw error;
+      }
     }
 
     const uniqueHexCodes = Array.from(hexSet);
@@ -179,14 +189,12 @@ async function launchBrowserAndSearch(Link, duration) {
         year: "numeric",
       })
       .replace(/\//g, "_");
-    const fileName = `${folderPath}/betcodes_${dateStamp}_${timestamp}.txt`;
-    await fs.promises.writeFile(fileName, hexCodesString);
-    
+    const fileName = `${folderPath}/betcodes_${dateStamp}_${timestamp}_${link}.txt`;
+    await fs.writeFile(fileName, hexCodesString);
+
     console.log(
       `\nScrolling completed. Hexadecimal codes saved to ${fileName}.`
     );
-    
-    // You can perform further actions with the search results here
   } catch (error) {
     console.error("Error during login and search:", error);
   } finally {
@@ -197,15 +205,19 @@ async function launchBrowserAndSearch(Link, duration) {
 
 async function loginAndSearch() {
   try {
-    const Link = await getSearchLink();
+    const links = await getSearchLinks();
     const duration = await getScrollDuration();
 
-    if (!Link) {
-      throw new Error("Please provide a search link.");
+    if (!links || links.length === 0) {
+      throw new Error("Please provide at least one search query.");
     }
 
-    // Now that you have the link, launch the browser and search
-    await launchBrowserAndSearch(Link, duration);
+    // Now that you have the links, launch the browser and search
+    const searches = links.map((link) =>
+      launchBrowserAndSearch(link, duration)
+    );
+
+    await Promise.all(searches);
   } catch (error) {
     console.error("Error during login and search:", error);
   }
