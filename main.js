@@ -3,28 +3,28 @@ const fs = require("fs");
 const prompts = require("prompts");
 const spinner = require("simple-spinner");
 
-// function linkify(input) {
-//   return input.replace(/ /g, "%20");
-// }
+function linkify(input) {
+  return input.replace(/ /g, "%20");
+}
 
-// function countdownTimer(milliseconds) {
-//   let remainingTime = milliseconds;
-//   let startTime = Date.now();
+function countdownTimer(milliseconds) {
+  let remainingTime = milliseconds;
+  let startTime = Date.now();
 
-//   const intervalId = setInterval(function () {
-//     const elapsedTime = Date.now() - startTime;
-//     const remainingMilliseconds = remainingTime - elapsedTime;
+  const intervalId = setInterval(function () {
+    const elapsedTime = Date.now() - startTime;
+    const remainingMilliseconds = remainingTime - elapsedTime;
 
-//     if (remainingMilliseconds <= 0) {
-//       clearInterval(intervalId);
-//       process.stdout.write("\r \n");
-//     } else {
-//       const seconds = Math.floor(remainingMilliseconds / 1000);
-//       const milliseconds = remainingMilliseconds % 1000;
-//       process.stdout.write(`\r${seconds}.${milliseconds} seconds  `);
-//     }
-//   }, 10);
-// }
+    if (remainingMilliseconds <= 0) {
+      clearInterval(intervalId);
+      process.stdout.write("\r \n");
+    } else {
+      const seconds = Math.floor(remainingMilliseconds / 1000);
+      const milliseconds = remainingMilliseconds % 1000;
+      process.stdout.write(`\r${seconds}.${milliseconds} seconds  `);
+    }
+  }, 10);
+}
 
 async function extractTextFromElement(element) {
   const text = await element.evaluate((el) => el.textContent);
@@ -85,7 +85,11 @@ async function scrollAndExtractCodes(
   return extractedHexCodes;
 }
 
+let extractedHexCodes = []; // Define it here
+
 (async () => {
+  let browser;
+
   try {
     const response = await prompts([
       {
@@ -104,7 +108,7 @@ async function scrollAndExtractCodes(
 
     const { Time, Linkk } = response;
     const Link = linkify(Linkk);
-    const browser = await puppeteer.launch({
+    browser = await puppeteer.launch({
       headless: false,
       executablePath:
         "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
@@ -114,22 +118,23 @@ async function scrollAndExtractCodes(
     await page.setDefaultNavigationTimeout(0);
     const cookies = require("./auth.json");
     await page.setCookie(...cookies);
+    
     await page.goto(
       `https://twitter.com/search?q=${Link}&src=typeahead_click&f=live`
     );
-    const selectorA =
-      "span.css-901oao.css-16my406.r-poiln3.r-bcqeeo.r-qvutc0";
+    // const selectorA =
+    //   "span.css-901oao.css-16my406.r-poiln3.r-bcqeeo.r-qvutc0";
     const selectorB = 'div[data-testid="tweetText"]';
 
-    await page.waitForSelector(selectorA);
+    // await page.waitForSelector(selectorA);
     await page.waitForSelector(selectorB);
 
     const hexCodeRegex = /\b[0-9A-Fa-f]{7,8}\b/g;
 
     const scrollDuration = Time;
-    const selectors = [selectorA, selectorB];
+    const selectors = [ selectorB];
     countdownTimer(Time);
-    const extractedHexCodes = await scrollAndExtractCodes(
+    extractedHexCodes = await scrollAndExtractCodes(
       page,
       selectors,
       hexCodeRegex,

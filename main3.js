@@ -1,5 +1,5 @@
-const puppeteer = require("puppeteer");
-const fs = require("fs").promises;
+puppeteer = require("puppeteer");
+const fs = require("fs");
 const prompt = require("prompt");
 
 prompt.start();
@@ -9,42 +9,45 @@ async function extractTextFromElement(element) {
   return text.trim();
 }
 
-async function extractAllTweets(page, selector) {
+async function extractAllTweets(page, selectors) {
   const tweets = [];
 
-  const tweetElements = await page.$$(selector);
+  for (const selector of selectors) {
+    const tweetElements = await page.$$(selector);
 
-  for (const tweetElement of tweetElements) {
-    const tweetText = await extractTextFromElement(tweetElement);
-    tweets.push(tweetText);
+    for (const tweetElement of tweetElements) {
+      const tweetText = await extractTextFromElement(tweetElement);
+      tweets.push(tweetText);
+    }
   }
 
   return tweets;
 }
 
+// Function to set cookies
 async function setCookies(page, cookies) {
   await page.setCookie(...cookies);
+  // Wait for a short period to ensure cookies are set
   await page.waitForTimeout(1000);
 }
 
-async function getSearchLinks() {
+function getSearchLink() {
   return new Promise((resolve, reject) => {
     prompt.get(
       [
         {
-          name: "Links",
-          description: "Enter your search queries separated by commas",
+          name: "Link",
+          description: "Enter your search query",
           type: "string",
           required: true,
-          message: "Queries are required",
+          message: "Query is required",
         },
       ],
       (err, result) => {
         if (err) {
           reject(err);
         } else {
-          const links = result.Links.split(",").map((link) => link.trim());
-          resolve(links);
+          resolve(result.Link);
         }
       }
     );
@@ -74,60 +77,71 @@ function getScrollDuration() {
   });
 }
 
-async function launchBrowserAndSearch(link, duration) {
+async function launchBrowserAndSearch(Link, duration) {
   const browser = await puppeteer.launch({ headless: false });
-  const allHexSet = new Set();
+  const page = await browser.newPage();
 
   try {
-    const page = await browser.newPage();
-
+    // Check if auth.json file exists
     const authFile = "auth.json";
-    try {
-      await fs.access(authFile);
-    } catch (error) {
+    if (!fs.existsSync(authFile)) {
       throw new Error(
         "auth.json not found. Please login manually to obtain cookies."
       );
     }
 
-    const cookies = JSON.parse(await fs.readFile(authFile, "utf8"));
+    // Read cookies from auth.json
+    const cookies = JSON.parse(fs.readFileSync(authFile, "utf8"));
 
+    // Navigate to Twitter before setting cookies
+    await page.goto("https://twitter.com", { waitUntil: "domcontentloaded" });
+
+    // Set cookies
+    await setCookies(page, cookies);
+
+    // Navigate directly to the Twitter search page with the user input link
     await page.goto(
-      `https://twitter.com/search?q=${link}&src=typed_query&f=live`,
+      `https://twitter.com/search?q=${Link}&src=typeahead_click&f=live`,
       { waitUntil: "domcontentloaded" }
     );
 
-    await setCookies(page, cookies);
-
-    console.log(`Search results for "${link}" displayed.`);
+    console.log(`Search results for "${Link}" displayed.`);
 
     const remainingTime = duration / 1000;
     let counter = remainingTime;
     let hexCounter = 0;
+
+    const tweets = await extractAllTweets(page, [
+      "span.css-901oao.css-16my406.r-poiln3.r-bcqeeo.r-qvutc0",
+      'div[data-testid="tweetText"]',
+    ]);
     const hexSet = new Set();
-
+    // Scroll down for the specified duration
     const scrollInterval = setInterval(async () => {
-      await page.waitForTimeout(5000); // Wait for 5 seconds
-
       page.evaluate(() => {
         window.scrollBy(0, window.innerHeight);
       });
 
+      // Extract tweets and add them to the array
       const tweetElements = await page.$$('div[data-testid="tweetText"]');
       const tweetTexts = await Promise.all(
         tweetElements.map((element) =>
           element.evaluate((node) => node.innerText)
         )
       );
-
       for (const tweetText of tweetTexts) {
+        // Use a regular expression to find hexadecimal numbers
         const hexNumbers = tweetText.match(/\b(?:[0-9a-fA-F]{7,8})\b/g);
-
-        if (hexNumbers) {
-          hexSet.add(...hexNumbers);
-        }
+        
+       
+    if (hexNumbers) {
+        // Add the found hexadecimal numbers to the Set
+        hexSet.add(...hexNumbers);
       }
+      }
+    
 
+      
       hexCounter = Array.from(hexSet).length;
       process.stdout.clearLine();
       process.stdout.cursorTo(0);
@@ -136,23 +150,28 @@ async function launchBrowserAndSearch(link, duration) {
       );
 
       counter--;
-    }, 1000);
 
+    //   if (counter < 2) {
+    //     clearInterval(scrollInterval);
+        
+    //   }
+    }, 1000); // Scroll every second
+
+    // Wait for the specified duration
     await new Promise((resolve) => setTimeout(resolve, duration));
 
+    // Clear the interval to stop scrolling
     clearInterval(scrollInterval);
-    allHexSet.add(...hexSet);
-
-    console.log(`\nScrolling completed for "${link}".`);
 
     const folderPath = "./betcodes";
     try {
-      await fs.mkdir(folderPath);
+      await fs.promises.mkdir(folderPath);
     } catch (error) {
       if (error.code !== "EEXIST") {
         throw error;
       }
     }
+    
 
     const uniqueHexCodes = Array.from(hexSet);
     const hexCodesString = uniqueHexCodes.join("\n");
@@ -173,35 +192,33 @@ async function launchBrowserAndSearch(link, duration) {
       })
       .replace(/\//g, "_");
     const fileName = `${folderPath}/betcodes_${dateStamp}_${timestamp}.txt`;
-    await fs.writeFile(fileName, hexCodesString);
-
-    console.log(
-      `\nScrolling completed. Hexadecimal codes saved to ${fileName}.`
-    );
+    await fs.promises.writeFile(fileName, hexCodesString);
+    console.log(`Unique Hexadecimal codes successfully written to ${fileName}.`);
+    // console.log(`\nScrolling completed. Hexadecimal codes saved to ${fileName}.`);
+    // You can perform further actions with the search results here
   } catch (error) {
     console.error("Error during login and search:", error);
   } finally {
+    // Close the Puppeteer browser
     await browser.close();
   }
 }
 
 async function loginAndSearch() {
   try {
-    const links = await getSearchLinks();
+    const Link = await getSearchLink();
     const duration = await getScrollDuration();
 
-    if (!links || links.length === 0) {
-      throw new Error("Please provide at least one search query.");
+    if (!Link) {
+      throw new Error("Please provide a search link.");
     }
 
-    const searches = links.map((link) =>
-      launchBrowserAndSearch(link, duration)
-    );
-
-    await Promise.all(searches);
+    // Now that you have the link, launch the browser and search
+    await launchBrowserAndSearch(Link, duration);
   } catch (error) {
     console.error("Error during login and search:", error);
   }
 }
 
+// Run the script
 loginAndSearch();
