@@ -1,5 +1,6 @@
 # sportybet-code-hunter
-A script to help scrape sportybet booking codes from twitter
+A script
+ to help scrape sportybet booking codes from twitter
 
 # Usage
 * ```git clone https://github.com/ChibuikemMichaelIlonze/sportybet-code-hunter.git ``` in terminal or download the zip.
