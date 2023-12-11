@@ -8,3 +8,4 @@ A script
 *  ```npm start```
 * Input how long you want it to search for codes (in milliseconds)
 * When its done it'll create a file ```betcodes.txt``` containing all the scraped codes
+
