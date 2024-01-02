@@ -9,6 +9,7 @@ async function extractTextFromElement(element) {
   return text.trim();
 }
 
+
 async function extractAllTweets(page, selectors) {
   const tweets = [];
 
@@ -132,16 +133,13 @@ async function launchBrowserAndSearch(Link, duration) {
       for (const tweetText of tweetTexts) {
         // Use a regular expression to find hexadecimal numbers
         const hexNumbers = tweetText.match(/\b(?:[0-9a-fA-F]{7,8})\b/g);
-        
-       
-    if (hexNumbers) {
-        // Add the found hexadecimal numbers to the Set
-        hexSet.add(...hexNumbers);
-      }
-      }
-    
 
-      
+        if (hexNumbers) {
+          // Add the found hexadecimal numbers to the Set
+          hexSet.add(...hexNumbers);
+        }
+      }
+
       hexCounter = Array.from(hexSet).length;
       process.stdout.clearLine();
       process.stdout.cursorTo(0);
@@ -151,10 +149,10 @@ async function launchBrowserAndSearch(Link, duration) {
 
       counter--;
 
-    //   if (counter < 2) {
-    //     clearInterval(scrollInterval);
-        
-    //   }
+      //   if (counter < 2) {
+      //     clearInterval(scrollInterval);
+
+      //   }
     }, 1000); // Scroll every second
 
     // Wait for the specified duration
@@ -171,7 +169,6 @@ async function launchBrowserAndSearch(Link, duration) {
         throw error;
       }
     }
-    
 
     const uniqueHexCodes = Array.from(hexSet);
     const hexCodesString = uniqueHexCodes.join("\n");
@@ -193,7 +190,9 @@ async function launchBrowserAndSearch(Link, duration) {
       .replace(/\//g, "_");
     const fileName = `${folderPath}/betcodes_${dateStamp}_${timestamp}.txt`;
     await fs.promises.writeFile(fileName, hexCodesString);
-    console.log(`Unique Hexadecimal codes successfully written to ${fileName}.`);
+    console.log(
+      `Unique Hexadecimal codes successfully written to ${fileName}.`
+    );
     // console.log(`\nScrolling completed. Hexadecimal codes saved to ${fileName}.`);
     // You can perform further actions with the search results here
   } catch (error) {
