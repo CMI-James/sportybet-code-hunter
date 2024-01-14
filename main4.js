@@ -1,7 +1,7 @@
 const puppeteer = require("puppeteer");
 const fs = require("fs");
 const prompt = require("prompt");
-const path = require("path");  // Add this line
+const path = require("path"); // Add this line
 prompt.start();
 
 async function extractTextFromElement(element) {
