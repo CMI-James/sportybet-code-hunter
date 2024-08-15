@@ -86,17 +86,8 @@ function getScrollDuration() {
 // Function to append bet codes to the general file
 async function appendToGeneralFile(generalFilePath, hexCodesString) {
   try {
-    // Check if the general file exists
-    if (fs.existsSync(generalFilePath)) {
-      await fs.promises.appendFile(generalFilePath, hexCodesString + '\n');
-      console.log(`Codes appended to ${generalFilePath}.`);
-    } else {
-      await fs.promises.mkdir(path.dirname(generalFilePath), {
-        recursive: true,
-      });
-      await fs.promises.writeFile(generalFilePath, hexCodesString + '\n');
-      console.log(`Codes written to ${generalFilePath}.`);
-    }
+    await fs.promises.appendFile(generalFilePath, hexCodesString + '\n');
+    console.log(`Codes appended to ${generalFilePath}.`);
   } catch (error) {
     console.error("Error appending codes to general file:", error);
   }
@@ -185,18 +176,17 @@ async function launchBrowserAndSearch(Link, duration) {
       counter--;
     }, 1000);
 
-    // Write codes to file every 5 minutes
-    setInterval(async () => {
+    // Write codes to file continuously
+    while (true) {
       const uniqueHexCodes = Array.from(generalCodesSet);
       await appendToGeneralFile(generalFilePath, uniqueHexCodes.join("\n"));
-    }, 300000); // 5 minutes in milliseconds
-
-    await new Promise((resolve) => setTimeout(resolve, duration));
-    clearInterval(scrollInterval);
+      await new Promise(resolve => setTimeout(resolve, 300000)); // 5 minutes
+    }
 
   } catch (error) {
     console.error("Error during login and search:", error);
   } finally {
+    clearInterval(scrollInterval);
     await browser.close();
   }
 }

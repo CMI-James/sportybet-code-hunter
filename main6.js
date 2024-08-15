@@ -122,9 +122,9 @@ async function launchBrowserAndSearch(Link, duration) {
     const dateStamp = new Date().toLocaleDateString("en-US", { day: "2-digit", month: "2-digit", year: "numeric" }).replace(/\//g, "_");
     
     const authFile = "auth.json";
-    if (!fs.existsSync(authFile)) {
-      throw new Error("auth.json not found. Please login manually to obtain cookies.");
-    }
+    // if (!fs.existsSync(authFile)) {
+    //   throw new Error("auth.json not found. Please login manually to obtain cookies.");
+    // }
 
     const cookies = JSON.parse(fs.readFileSync(authFile, "utf8"));
     await page.goto("https://twitter.com", { waitUntil: "domcontentloaded" });
