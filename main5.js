@@ -1,7 +1,8 @@
 const puppeteer = require("puppeteer");
 const fs = require("fs");
 const prompt = require("prompt");
-const path = require("path"); // Add this line
+const path = require("path");
+
 prompt.start();
 
 async function extractTextFromElement(element) {
@@ -120,11 +121,35 @@ async function appendToGeneralFile(generalFilePath, hexCodesString) {
   }
 }
 
+async function saveDataBeforeExit(browser, generalFilePath, hexSet) {
+  try {
+    const existingGeneralCodes = fs.existsSync(generalFilePath)
+      ? await fs.promises.readFile(generalFilePath, "utf8")
+      : "";
+
+    const generalCodesSet = new Set(existingGeneralCodes.trim().split("\n"));
+
+    hexSet.forEach((code) => generalCodesSet.add(code));
+
+    const updatedCodesString = Array.from(generalCodesSet).join("\n");
+
+    await fs.promises.writeFile(generalFilePath, updatedCodesString);
+
+    console.log(`Codes saved to ${generalFilePath}.`);
+  } catch (error) {
+    console.error("Error saving codes before exit:", error);
+  } finally {
+    // Close the Puppeteer browser
+    await browser.close();
+  }
+}
+
 async function launchBrowserAndSearch(Link, duration) {
   const browser = await puppeteer.launch({ headless: false });
   const page = await browser.newPage();
 
-  let generalCodesSet = new Set();
+  let hexSet = new Set();
+
   const timestamp = new Date()
     .toLocaleTimeString("en-US", {
       hour12: true,
@@ -140,6 +165,7 @@ async function launchBrowserAndSearch(Link, duration) {
       year: "numeric",
     })
     .replace(/\//g, "_");
+
   try {
     // Check if auth.json file exists
     const authFile = "auth.json";
@@ -176,12 +202,14 @@ async function launchBrowserAndSearch(Link, duration) {
       ? await fs.promises.readFile(generalFilePath, "utf8")
       : "";
 
-    generalCodesSet = new Set(existingGeneralCodes.trim().split("\n"));
+    const generalCodesSet = new Set(existingGeneralCodes.trim().split("\n"));
+
     const tweets = await extractAllTweets(page, [
       "span.css-901oao.css-16my406.r-poiln3.r-bcqeeo.r-qvutc0",
       'div[data-testid="tweetText"]',
     ]);
     const hexSet = new Set();
+
     // Scroll down for the specified duration
     const scrollInterval = setInterval(async () => {
       page.evaluate(() => {
@@ -206,7 +234,6 @@ async function launchBrowserAndSearch(Link, duration) {
       }
 
       hexCounter = Array.from(hexSet).length;
-      // Read existing codes from the general file
 
       hexSet.forEach((code) => generalCodesSet.add(code));
       process.stdout.clearLine();
@@ -216,11 +243,6 @@ async function launchBrowserAndSearch(Link, duration) {
       );
 
       counter--;
-
-      //   if (counter < 2) {
-      //     clearInterval(scrollInterval);
-
-      //   }
     }, 1000); // Scroll every second
 
     // Wait for the specified duration
@@ -246,7 +268,7 @@ async function launchBrowserAndSearch(Link, duration) {
     console.log(
       `Unique Hexadecimal codes successfully written to ${fileName}.`
     );
-    // console.log(`\nScrolling completed. Hexadecimal codes saved to ${fileName}.`);
+
     // Append codes to the general file
     await appendToGeneralFile(generalFilePath, hexCodesString);
 
@@ -254,8 +276,8 @@ async function launchBrowserAndSearch(Link, duration) {
   } catch (error) {
     console.error("Error during login and search:", error);
   } finally {
-    // Close the Puppeteer browser
-    await browser.close();
+    // Save data before exiting
+    await saveDataBeforeExit(browser, generalFilePath, hexSet);
   }
 }
 
