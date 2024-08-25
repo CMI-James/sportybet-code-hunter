@@ -9,32 +9,56 @@ prompt.start();
 let counter; // Declare counter variable outside the function
 let hexCounter = 0; // Track the number of unique hex codes
 
+// Function to send a notification
+function sendNotification(title, message) {
+  notifier.notify({
+    title: title,
+    message: message,
+    sound: true, // Only Notification Center or Windows Toasters
+  });
+}
+
 // Function to extract text content from an element
 async function extractTextFromElement(element) {
-  const text = await element.evaluate((el) => el.textContent);
-  return text.trim();
+  try {
+    const text = await element.evaluate((el) => el.textContent);
+    return text.trim();
+  } catch (error) {
+    sendNotification("Error", `Error extracting text from element: ${error.message}`);
+    throw error;
+  }
 }
 
 // Function to extract tweets from page using given selectors
 async function extractAllTweets(page, selectors) {
-  const tweets = [];
+  try {
+    const tweets = [];
 
-  for (const selector of selectors) {
-    const tweetElements = await page.$$(selector);
+    for (const selector of selectors) {
+      const tweetElements = await page.$$(selector);
 
-    for (const tweetElement of tweetElements) {
-      const tweetText = await extractTextFromElement(tweetElement);
-      tweets.push(tweetText);
+      for (const tweetElement of tweetElements) {
+        const tweetText = await extractTextFromElement(tweetElement);
+        tweets.push(tweetText);
+      }
     }
-  }
 
-  return tweets;
+    return tweets;
+  } catch (error) {
+    sendNotification("Error", `Error extracting tweets: ${error.message}`);
+    throw error;
+  }
 }
 
 // Function to set cookies for the page
 async function setCookies(page, cookies) {
-  await page.setCookie(...cookies);
-  await page.waitForTimeout(1000); // Wait for cookies to be set
+  try {
+    await page.setCookie(...cookies);
+    await page.waitForTimeout(1000); // Wait for cookies to be set
+  } catch (error) {
+    sendNotification("Error", `Error setting cookies: ${error.message}`);
+    throw error;
+  }
 }
 
 // Function to prompt user for search link
@@ -52,6 +76,7 @@ function getSearchLink() {
       ],
       (err, result) => {
         if (err) {
+          sendNotification("Error", `Error getting search link: ${err.message}`);
           reject(err);
         } else {
           resolve(result.Link);
@@ -76,21 +101,13 @@ function getScrollDuration() {
       ],
       (err, result) => {
         if (err) {
+          sendNotification("Error", `Error getting scroll duration: ${err.message}`);
           reject(err);
         } else {
           resolve(result.duration * 60000); // Convert minutes to milliseconds
         }
       }
     );
-  });
-}
-
-// Function to send a notification
-function sendNotification(title, message) {
-  notifier.notify({
-    title: title,
-    message: message,
-    sound: true, // Only Notification Center or Windows Toasters
   });
 }
 
@@ -130,6 +147,7 @@ async function appendToGeneralFile(generalFilePath, hexCodesString) {
     sendNotification("Code Fetcher", notificationMessage);
 
   } catch (error) {
+    sendNotification("Error", `Error appending codes to general file: ${error.message}`);
     console.error("Error appending codes to general file:", error);
   }
 }
@@ -170,23 +188,31 @@ async function launchBrowserAndSearch(Link, duration) {
     }, 60000); // Every minute
 
     const scrollInterval = setInterval(async () => {
-      page.evaluate(() => { window.scrollBy(0, window.innerHeight); });
+      try {
+        page.evaluate(() => { window.scrollBy(0, window.innerHeight); });
 
-      const tweetElements = await page.$$('div[data-testid="tweetText"]');
-      const tweetTexts = await Promise.all(tweetElements.map((element) => element.evaluate((node) => node.innerText)));
+        const tweetElements = await page.$$('div[data-testid="tweetText"]');
+        const tweetTexts = await Promise.all(tweetElements.map((element) => element.evaluate((node) => node.innerText)));
 
-      for (const tweetText of tweetTexts) {
-        const hexNumbers = tweetText.match(/\b(?:[0-9a-fA-F]{7,8})\b/g);
-        if (hexNumbers) { hexSet.add(...hexNumbers); }
+        for (const tweetText of tweetTexts) {
+          const hexNumbers = tweetText.match(/\b(?:[0-9a-fA-F]{7,8})\b/g);
+          if (hexNumbers) { hexSet.add(...hexNumbers); }
+        }
+
+        hexCounter = hexSet.size;
+        hexSet.forEach((code) => generalCodesSet.add(code));
+
+        process.stdout.clearLine();
+        process.stdout.cursorTo(0);
+        process.stdout.write(`Time remaining: ${counter} seconds | General Codes: ${generalCodesSet.size} | Codes Fetched: ${hexCounter}\r`);
+        counter--;
+      } catch (error) {
+        sendNotification("Error", `Error during scrolling: ${error.message}`);
+        clearInterval(scrollInterval);
+        clearInterval(notificationInterval);
+        await browser.close();
+        throw error;
       }
-
-      hexCounter = hexSet.size;
-      hexSet.forEach((code) => generalCodesSet.add(code));
-
-      process.stdout.clearLine();
-      process.stdout.cursorTo(0);
-      process.stdout.write(`Time remaining: ${counter} seconds | General Codes: ${generalCodesSet.size} | Codes Fetched: ${hexCounter}\r`);
-      counter--;
     }, 1000);
 
     await new Promise((resolve) => setTimeout(resolve, duration));
@@ -201,6 +227,7 @@ async function launchBrowserAndSearch(Link, duration) {
 
     await appendToGeneralFile(generalFilePath, hexCodesString);
   } catch (error) {
+    sendNotification("Error", `Error during search process: ${error.message}`);
     console.error("Error during login and search:", error);
   } finally {
     await browser.close();
@@ -218,6 +245,7 @@ async function loginAndSearch() {
 
     await launchBrowserAndSearch(Link, duration);
   } catch (error) {
+    sendNotification("Error", `Error initiating search: ${error.message}`);
     console.error("Error during login and search:", error);
   }
 }
