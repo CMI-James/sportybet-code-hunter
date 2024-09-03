@@ -162,7 +162,7 @@ async function launchBrowserAndSearch(Link, duration) {
 
     const authFile = "auth.json";
     // if (!fs.existsSync(authFile)) {
-    //   throw new Error("auth.json not found. Please login manually to obtain cookies.");
+    //   throw new Error("auth.json not found. Please login manually to obtain cookies.");;
     // }
 
     const cookies = JSON.parse(fs.readFileSync(authFile, "utf8"));
