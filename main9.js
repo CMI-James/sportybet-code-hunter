@@ -54,7 +54,7 @@ async function extractAllTweets(page, selectors) {
 async function setCookies(page, cookies) {
   try {
     await page.setCookie(...cookies);
-    await new Promise((resolve) => setTimeout(resolve, 1000)); // 1 second delay
+    await new Promise((resolve) => setTimeout(resolve, 5000)); // 1 second delay
   } catch (error) {
     sendNotification("Error", `Error setting cookies: ${error.message}`);
     throw error;
