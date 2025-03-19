@@ -24,7 +24,10 @@ async function extractTextFromElement(element) {
     const text = await element.evaluate((el) => el.textContent);
     return text.trim();
   } catch (error) {
-    sendNotification("Error", `Error extracting text from element: ${error.message}`);
+    sendNotification(
+      "Error",
+      `Error extracting text from element: ${error.message}`
+    );
     throw error;
   }
 }
@@ -76,7 +79,10 @@ function getSearchLink() {
       ],
       (err, result) => {
         if (err) {
-          sendNotification("Error", `Error getting search link: ${err.message}`);
+          sendNotification(
+            "Error",
+            `Error getting search link: ${err.message}`
+          );
           reject(err);
         } else {
           resolve(result.Link);
@@ -101,7 +107,10 @@ function getScrollDuration() {
       ],
       (err, result) => {
         if (err) {
-          sendNotification("Error", `Error getting scroll duration: ${err.message}`);
+          sendNotification(
+            "Error",
+            `Error getting scroll duration: ${err.message}`
+          );
           reject(err);
         } else {
           resolve(result.duration * 60000); // Convert minutes to milliseconds
@@ -125,29 +134,37 @@ async function appendToGeneralFile(generalFilePath, hexCodesString) {
         .filter((code) => !existingCodesSet.has(code));
 
       if (newCodes.length > 0) {
-        const updatedCodesString = `${existingCodes.trim()}\n\n\n\n${newCodes.join("\n")}`;
+        const updatedCodesString = `${existingCodes.trim()}\n\n\n\n${newCodes.join(
+          "\n"
+        )}`;
         await fs.promises.writeFile(generalFilePath, updatedCodesString);
         console.log(`Codes appended to ${generalFilePath}.`);
       } else {
         console.log("No new codes to append (duplicates detected).");
       }
     } else {
-      await fs.promises.mkdir(path.dirname(generalFilePath), { recursive: true });
+      await fs.promises.mkdir(path.dirname(generalFilePath), {
+        recursive: true,
+      });
       await fs.promises.writeFile(generalFilePath, hexCodesString);
       console.log(`Codes written to ${generalFilePath}.`);
     }
 
     // Copy to clipboard using dynamic import
-    const clipboardy = await import('clipboardy');
+    const clipboardy = await import("clipboardy");
     clipboardy.default.writeSync(hexCodesString);
     console.log(`Codes copied to clipboard.`);
 
     // Send final notification
-    const notificationMessage = `Appended ${hexCodesString.split("\n").length} new codes to the file.`;
+    const notificationMessage = `Appended ${
+      hexCodesString.split("\n").length
+    } new codes to the file.`;
     sendNotification("Code Fetcher", notificationMessage);
-
   } catch (error) {
-    sendNotification("Error", `Error appending codes to general file: ${error.message}`);
+    sendNotification(
+      "Error",
+      `Error appending codes to general file: ${error.message}`
+    );
     console.error("Error appending codes to general file:", error);
   }
 }
@@ -158,7 +175,13 @@ async function launchBrowserAndSearch(Link, duration) {
   const page = await browser.newPage();
 
   try {
-    const dateStamp = new Date().toLocaleDateString("en-US", { day: "2-digit", month: "2-digit", year: "numeric" }).replace(/\//g, "_");
+    const dateStamp = new Date()
+      .toLocaleDateString("en-US", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
+      .replace(/\//g, "_");
 
     const authFile = "auth.json";
     // if (!fs.existsSync(authFile)) {
@@ -169,13 +192,18 @@ async function launchBrowserAndSearch(Link, duration) {
     await page.goto("https://twitter.com", { waitUntil: "domcontentloaded" });
     await setCookies(page, cookies);
 
-    await page.goto(`https://twitter.com/search?q=${Link}&src=typeahead_click&f=live`, { waitUntil: "domcontentloaded" });
+    await page.goto(
+      `https://twitter.com/search?q=${Link}&src=typeahead_click&f=live`,
+      { waitUntil: "domcontentloaded" }
+    );
     console.log(`Search results for "${Link}" displayed.`);
 
     counter = duration / 1000; // Initialize counter
 
     const generalFilePath = `./betcodes/betcodes_general_${dateStamp}.txt`;
-    const existingGeneralCodes = fs.existsSync(generalFilePath) ? await fs.promises.readFile(generalFilePath, "utf8") : "";
+    const existingGeneralCodes = fs.existsSync(generalFilePath)
+      ? await fs.promises.readFile(generalFilePath, "utf8")
+      : "";
     const generalCodesSet = new Set(existingGeneralCodes.trim().split("\n"));
     const hexSet = new Set();
 
@@ -189,14 +217,22 @@ async function launchBrowserAndSearch(Link, duration) {
 
     const scrollInterval = setInterval(async () => {
       try {
-        page.evaluate(() => { window.scrollBy(0, window.innerHeight); });
+        page.evaluate(() => {
+          window.scrollBy(0, window.innerHeight);
+        });
 
         const tweetElements = await page.$$('div[data-testid="tweetText"]');
-        const tweetTexts = await Promise.all(tweetElements.map((element) => element.evaluate((node) => node.innerText)));
+        const tweetTexts = await Promise.all(
+          tweetElements.map((element) =>
+            element.evaluate((node) => node.innerText)
+          )
+        );
 
         for (const tweetText of tweetTexts) {
           const hexNumbers = tweetText.match(/\b(?:[0-9a-fA-F]{7,8})\b/g);
-          if (hexNumbers) { hexSet.add(...hexNumbers); }
+          if (hexNumbers) {
+            hexSet.add(...hexNumbers);
+          }
         }
 
         hexCounter = hexSet.size;
@@ -204,7 +240,9 @@ async function launchBrowserAndSearch(Link, duration) {
 
         process.stdout.clearLine();
         process.stdout.cursorTo(0);
-        process.stdout.write(`Time remaining: ${counter} seconds | General Codes: ${generalCodesSet.size} | Codes Fetched: ${hexCounter}\r`);
+        process.stdout.write(
+          `Time remaining: ${counter} seconds | General Codes: ${generalCodesSet.size} | Codes Fetched: ${hexCounter}\r`
+        );
         counter--;
       } catch (error) {
         sendNotification("Error", `Error during scrolling: ${error.message}`);
